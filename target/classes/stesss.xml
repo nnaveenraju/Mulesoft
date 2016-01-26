@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+    <sfdc:config name="Salesforce__Basic_Authentication" username="nnaveenraju@yahoo.com" password="Vishal2@" securityToken="${securitytoken}" fetchAllApexRestMetadata="true" doc:name="Salesforce: Basic Authentication"/>
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <flow name="stesssFlow" tracking:enable-default-events="true">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="HTTP"/>
+        <json:json-to-object-transformer doc:name="JSON to Object"/>
+        <tracking:custom-event event-name="flowdata" doc:name="Custom Business Event">
+            <tracking:meta-data key="flowname" value="Test"/>
+            <tracking:meta-data key="Payload Size" value="groovy: payload.&quot;students&quot;.size()"/>
+        </tracking:custom-event>
+        <flow-ref name="stesssSub_Flow" doc:name="stesssSub_Flow"/>
+
+        <sfdc:create config-ref="Salesforce__Basic_Authentication"  type="Students__c" doc:name="Salesforce">
+            <sfdc:objects ref="#[payload]"/>
+        </sfdc:create>
+
+        <object-to-string-transformer doc:name="Object to String"/>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        <catch-exception-strategy doc:name="Catch Exception Strategy">
+            <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        </catch-exception-strategy>
+    </flow>
+    <sub-flow name="stesssSub_Flow">
+        <logger level="INFO" doc:name="Logger"/>
+        <dw:transform-message metadata:id="257944a3-2fa3-4536-a2ae-ee33cf1a7f32" doc:name="Transform Message">
+            <dw:input-payload doc:sample="json_2.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%input payload application/json
+%output application/java
+---
+payload.students map ((student , indexOfStudent) -> {
+
+	Name: student.Name
+})]]></dw:set-payload>
+        </dw:transform-message>
+    </sub-flow>
+</mule>
