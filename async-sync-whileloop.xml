@@ -1,0 +1,457 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+
+	
+<!--           def isAssignment(assignmentId, assignments)
+          {
+          System.out.println("assignmentId : "  + assignmentId + " and assignments" + assignments )
+          	foreach ( item in assignments )  
+				{
+					 if (item.contentType == 'assignment')
+					 {
+						 if (item.contentId == assignmentId)
+						  return true;
+						 else
+						 	return false;
+					 }
+				}
+				return false;
+          } -->
+          
+	<configuration doc:name="Configuration">
+		<expression-language >
+		<import class="org.mule.util.StringUtils" />
+       	<global-functions>
+          
+          
+         def isTermEnded(endDate, timeZone)
+           {
+	           	import java.util.Date;
+				import java.text.SimpleDateFormat;
+				import java.util.TimeZone;
+				import java.util.Calendar;
+				
+         		if (endDate == null)
+         		{
+         			return false;
+         		}
+         		
+	         	Date termStartDate = null;
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+				sdf.setTimeZone(TimeZone.getTimeZone(timeZone));
+				termEndDate = sdf.parse(endDate);
+				
+				Calendar cal = Calendar.getInstance();
+				cal.setTime(termEndDate);
+				cal.add(Calendar.DATE, 1);
+				termEndDate = cal.getTime();
+				
+				Date todayDate = sdf.parse(sdf.format(new Date()));
+				
+				Integer isBefore = todayDate.compareTo(termEndDate);
+				
+				//System.out.println("endDate : " + endDate );
+				//System.out.println("termEndDate : " + termEndDate );
+				//System.out.println("todayDate : " + todayDate );
+				//System.out.println("End Date : " + isBefore );
+				if (0 > isBefore)
+					return false;
+				else
+					return true;
+				
+           }
+          
+        def getMondayLastWeek()
+          {
+          
+				import java.util.Calendar;
+				import org.joda.time.DateTime;
+				import org.joda.time.DateTimeConstants;
+			
+				DateTime now = new DateTime();
+				DateTime monday = now.withDayOfWeek(DateTimeConstants.MONDAY);
+				//System.out.println("Monday def ====  " + monday.toString("YYYY-MM-dd"));
+				
+				return	monday.toString("YYYY-MM-dd");		
+			}
+			
+		def isATestTerm(strTerm)
+          {
+				if (strTerm.toLowerCase().contains("test") || strTerm.toLowerCase().contains("default term") || strTerm.toLowerCase().contains("master term") || strTerm.toLowerCase().contains("training") || strTerm.toLowerCase().contains("cdt"))
+				{
+					return true;
+				}
+				return	false;		
+			}
+			
+          def getSundayLastWeek()
+          {
+          
+				import java.util.Calendar;
+				import org.joda.time.DateTime;
+				import org.joda.time.DateTimeConstants;
+			
+				DateTime now = new DateTime();
+				DateTime sunday = now.withDayOfWeek(DateTimeConstants.SUNDAY);
+				//System.out.println("sunday def === " + sunday.toString("YYYY-MM-dd"));
+				
+				return	sunday.toString("YYYY-MM-dd");	
+			}
+			
+            def getWordCount(textForWordCount){
+            	
+            	import org.jsoup.Jsoup;
+				import org.jsoup.nodes.Document;
+		
+				Document htmlText = Jsoup.parse(textForWordCount);
+				String str = htmlText.text().replace("\\n", "");
+				String[] strSplit = str.split(" ");
+				
+				//System.out.println("str length : " + strSplit.length +  " string values  : " + str );
+				
+				return strSplit.length;
+            
+            }
+            
+            def isInLastWeek(postedDate)
+            {
+            	import java.util.Date;
+				import java.text.SimpleDateFormat;
+				import java.util.TimeZone;
+				import org.joda.time.DateTime;
+				
+          		
+          		if (postedDate == null)
+          		{
+          			return false;
+          		}
+          		
+          		Date termStartDate = null;
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+				termStartDate = sdf.parse(postedDate);
+				
+				//System.out.println("postedDate : " + postedDate );
+				
+				Date monday = sdf.parse(getMondayLastWeek());
+				//System.out.println("Monday  week ----- : " + monday );
+				Date sunday = sdf.parse(getSundayLastWeek());
+				//System.out.println("Sunday  week ----- : " + sunday);
+				
+				Integer isBefore = termStartDate.compareTo(monday);
+				
+				//System.out.println("Before : " + isBefore );
+				if (0 > isBefore)
+				{
+					return false;
+				}
+				
+				Integer after = termStartDate.compareTo(sunday);
+				//System.out.println("after : " + after );
+				if (after > 0)
+					return false;
+          		
+          		return true;
+            }
+            
+	         def startDate(strDate,timeZone)
+	          {
+	          		import java.util.Date;
+					import java.text.SimpleDateFormat;
+					import java.util.TimeZone;
+					
+	          		
+	          		if (strDate == null)
+	          		{
+	          			return 0;
+	          		}
+	          		
+	          		
+	          		//System.out.println( "strDate  : " + strDate.toString() );
+	          		
+		          	Date termStartDate = null;
+					//SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+					sdf.setTimeZone(TimeZone.getTimeZone(timeZone));
+					
+					
+					termStartDate = sdf.parse(strDate);
+					//System.out.println( "strDate  :  1 : - " + termStartDate.toString() );
+	
+					SimpleDateFormat sdf1 =
+					        new SimpleDateFormat("EEE, MMM d, yyyy hh:mm:ss a z");
+					
+					Date todayDate = sdf.parse(sdf.format(new Date()));
+					
+					//System.out.println( "strDate  :  3 : - " + todayDate.toString() );
+					
+					long diffTime = todayDate.getTime() - termStartDate.getTime(); 	
+					//System.out.println( "strDate  :  4 : "  + diffTime.toString());
+					
+					long diffDays = diffTime / (24 * 60 * 60 * 1000);
+					
+					//System.out.println(  "diffDays parsed : " + diffDays.toString());
+					
+					return  diffDays;
+				}
+				
+				def getESTDateTime(strDate)
+	          	{
+	          		import java.util.Date;
+					import java.text.SimpleDateFormat;
+					import java.util.TimeZone;
+					
+	          		
+	          		if (strDate == null)
+	          		{
+	          			return null;
+	          		}
+	          		
+		          	Date fromDate = null;
+		          	Date toDate = null;
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+					sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+					fromDate = sdf.parse(strDate);
+					
+					
+					SimpleDateFormat toSDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					toSDF.setTimeZone(TimeZone.getTimeZone("America/New_York"));
+					
+					toDate = toSDF.format(fromDate);
+					
+					return toDate;
+					
+				}
+				
+				
+				def getSectionFromSISId(strSISId)
+				{
+					String[] strSplit = null;
+					if (strSISId.contains("-"))
+					{
+						strSplit = strSISId.split("-");
+						if(strSplit.length >=2)
+						{
+							if (Character.isDigit(strSplit[strSplit.length-2].charAt(0)))
+							{
+								return strSplit[strSplit.length-2];
+							}
+							else
+							{
+								return 0;
+							}
+						}
+						else
+							return strSplit[0];
+					}
+					else
+					{
+						return 0;
+					}
+				}
+        	</global-functions>
+		</expression-language>
+	</configuration>
+    <non-blocking-processing-strategy name="Non_Blocking_Processing_Strategy" maxThreads="25" minThreads="5" threadTTL="250" doc:name="Non Blocking Processing Strategy" poolExhaustedAction="WAIT"/>
+    <!-- <spring:beans>
+        <spring:bean id="Bean-next-url" name="Bean-next-url" class="com.bisk.autowithdrawals.GetNextURICanvas" scope="singleton">
+            <spring:property name="subFlow1" ref="common-codeSub_Flow"/>
+        </spring:bean>
+    </spring:beans> -->
+
+
+
+    <sub-flow name="salesforce-get-school-metadata">
+        <objectstore:retrieve config-ref="ObjectStore__Connector" key="apiMetaData" doc:name="ObjectStore"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload filter ( $['schoolPreQualifier'] == flowVars['school'] ) map ((values01, index) -> 
+{
+	apiToken : values01['apiToken'],
+	subDomain : values01['apiURIDomain'],
+	subDomainBasepath : values01['apiURIBasepath'],	
+	school : values01['schoolPreQualifier']
+})
+]]></dw:set-payload>
+        </dw:transform-message>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload[0]]]></dw:set-payload>
+        </dw:transform-message>
+    </sub-flow>
+    
+    <sub-flow name="get-next-paged-data" >
+        <logger message="#[flowVars['refId']] :  Getting any possible pagination data for users enrolled in course :  #[flowVars['canvasCourseId']]" level="INFO" doc:name="Logger-Info"/>
+        <set-payload value="#[message.inboundProperties['link'] != null ? message.inboundProperties['link'].toString() : '']" doc:name="Set Payload - from Link"/>
+        <!-- <message-filter doc:name="Message-Filter-out-zero-size-payloads">
+            <expression-filter expression="#[payload != empty]"/>
+        </message-filter> -->
+        <choice doc:name="Choice">
+            <when expression="#[payload != empty]">
+                <component class="com.bisk.autowithdrawals.GetNextURICanvas" doc:name="Java-get-next-uri">
+                    <!-- <singleton-object class="com.bisk.autowithdrawals.GetNextURICanvas">
+                        <property key="subFlow1"  value="common-codeSub_Flow"/>
+                    </singleton-object> -->
+                </component>
+                <logger message="#[flowVars['refId']] :  Next page URL : #[payload]" level="INFO" doc:name="Logger-Info"/>
+                <logger message="#[flowVars['refId']] : done page" level="INFO" doc:name="Logger"/>
+            </when>
+            <otherwise>
+                <logger message="Next page not available to get data.." level="INFO" doc:name="Logger"/>
+            </otherwise>
+        </choice>
+
+        
+        <!-- <flow-ref name="common-codeSub_Flow" doc:name="common-codeSub_Flow"/> -->
+
+    </sub-flow>
+    <sub-flow name="message-filter-exception-logger">
+        <logger message="#[flowVars['logKey']] :  Unable to processed as #[flowVars['msg']]" level="INFO" doc:name="Logger"/>
+    </sub-flow>
+    
+    <flow name="common-code-process-next-paged-data-using-url-transform-data">
+        <logger message="#[flowVars['refId']] : Getting next page data from URL : #[payload]" level="INFO" doc:name="Logger"/>
+        <choice doc:name="Choice-next-uri-payload-check">
+            <when expression="#[payload != empty]">
+
+                <http:request config-ref="HTTP_Req_canvas" path="#[payload]" method="GET" doc:name="HTTP-get-quizzes-per-course">
+                    <http:request-builder>
+                        <http:header headerName="Authorization" value="Bearer #[flowVars.apiToken]"/>
+                    </http:request-builder>
+                </http:request>
+                <logger message="#[flowVars['refId']] :  Calling flow : #[flowVars['dwProcessFlow']] to transform data.." level="INFO" doc:name="Logger-Info"/>
+                <flow-ref name="#[flowVars['dwProcessFlow']]" doc:name="bisk-lmp-withdrawals-transform-generic"/>
+                <expression-component doc:name="Expression"><![CDATA[
+flowVars['collectedData'] = flowVars['collectedData'] + payload;
+
+]]></expression-component>
+                <!-- <scripting:component doc:name="Groovy">
+                    <scripting:script engine="Groovy"><![CDATA[flowVars.collectedData.add(payload);
+
+for ( item in payload )  
+	{
+		 if (item.replies.size() > 0)
+		 {
+			 reply.replies.each 
+			 { replies -> 
+			 	println(replies.toString());
+			 	flowVars.collectedData.add(replies);
+			 }
+		 }
+	}]]></scripting:script>
+                </scripting:component> -->
+                <!-- <flow-ref name="get-next-paged-data" doc:name="get-next-paged-data"/> -->
+            </when>
+            <otherwise>
+                <logger message="#[flowVars['refId']] :  End of pagination... no Next page.." level="INFO" doc:name="Logger-Info"/>
+                <!-- <choice doc:name="Choice-store-only-if-needed">
+                    <when expression="#[flowVars['obKey']!= empty]">
+                        <logger message="#[flowVars['refId']] :  Storing data to ObjectStore : #[flowVars['obKey']] with payload size : #[flowVars['collectedData'].size()]" level="INFO" doc:name="Logger-Info"/>
+                        <objectstore:store config-ref="ObjectStore__Connector" key="#[flowVars['obKey']]" value-ref="#[flowVars['collectedData']]" overwrite="true" doc:name="ObjectStore"/>
+                    </when>
+                    <otherwise>
+                        <logger message="#[flowVars['refId']] : Don't objectstore" level="INFO" doc:name="Logger"/>
+                    </otherwise>
+                </choice> -->
+            </otherwise>
+        </choice>
+
+    </flow>
+    <flow name="common-code-send-email">
+        <expression-component doc:name="Expression"><![CDATA[flowVars['refId']=(flowVars['refIdmsg'] != null && flowVars['refIdmsg'] != '') ? flowVars['refIdmsg'] : flowVars['refId'];
+flowVars.notificationEmailId=flowVars.notificationEmail != null ? flowVars.notificationEmail : "${smtp.email.to}";]]></expression-component>
+        <logger message="#[flowVars['refId']]:Data to be sent as email : #[message.payloadAs(String)]" level="DEBUG" category="com.bisk.debug" doc:name="Logger"/>
+        <choice doc:name="Choice">
+            <when expression="#[payload.size()&gt;0]">
+                <choice doc:name="Choice">
+                    <when expression="#[ flowVars['processingType'] != null &amp;&amp; flowVars['processingType']=='notification']">
+                        <dw:transform-message doc:name="Transform Message - students to be dropped">
+                            <dw:set-payload><![CDATA[%dw 1.0
+%output application/csv
+---
+payload map ((values01, indexOd) -> {
+	
+	school : values01['school'],
+	courseAccountId : values01['courseAccountId'],
+	canvasCourseId : values01['canvasCourseId'],
+	canvasCourseName : values01['canvasCourseName'],
+	canvasCoursecode : values01['canvasCoursecode'],
+	courseSISId : values01['courseSISId'],
+	canvasUserId : values01.canvasUserId,
+	sisUserId : values01.sisUserId,
+	studentName : values01.studentName
+})
+]]></dw:set-payload>
+                        </dw:transform-message>
+
+                    </when>
+                    <otherwise>
+                        <dw:transform-message doc:name="Transform Message - students to be dropped">
+                            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload map ((values01, indexOd) -> {
+	
+	subDomain : values01['subDomain'],
+	subDomainBasepath : values01['subDomainBasepath'],
+	school : values01['school'],
+	canvasCourseId : values01['canvasCourseId'],
+	canvasUserId : values01.canvasUserId,
+	enrollments : values01.enrollments map ((enrollValues, enrollIndex) -> {
+		enrollmentStatus : enrollValues.enrollmentStatus  when enrollValues.enrollmentStatus? otherwise "" ,
+		enrollmentId : enrollValues.enrollmentId,
+		courseSectionId : enrollValues.courseSectionId,
+		sisUserId : enrollValues.sisUserId
+	})
+})]]></dw:set-payload>
+                        </dw:transform-message>
+                    </otherwise>
+                </choice>
+                <object-to-byte-array-transformer doc:name="Object to Byte Array"/>
+                <set-attachment attachmentName="${mule.env} #[' - ' +  flowVars.refId].csv" value="#[payload]" contentType="text/plain" doc:name="Attachment"/>
+                <set-payload value="#['Please check attached file for RISK students']" doc:name="Set Payload"/>
+            </when>
+            <otherwise>
+                <dw:transform-message doc:name="Transform Message empty message.">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	droppedStatus : "No students to be dropped",
+	status: "No drops and more happy students.."
+	
+}]]></dw:set-payload>
+                </dw:transform-message>
+            </otherwise>
+        </choice>
+        <set-property propertyName="subject" value="${mule.env} #[' - ' +  flowVars.refId]" doc:name="Property"/>
+        <logger message="#[flowVars['refId']]: Sending email" level="INFO" doc:name="Logger"/>
+        
+		<smtp:outbound-endpoint host="${smtp.add}"     to="#[groovy:flowVars.notificationEmailId]" 
+					from="${smtp.email.from}"  responseTimeout="10000" 
+					doc:name="SMTP" connector-ref="SMTP"  port="${smtp.port}"  />
+        
+        
+    </flow>
+	
+	
+	
+</mule>
