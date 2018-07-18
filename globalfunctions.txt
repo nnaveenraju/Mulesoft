@@ -1,0 +1,227 @@
+
+
+
+def getESTDateTime(strDate)
+{
+    import java.util.Date;
+    import java.text.SimpleDateFormat;
+    import java.util.TimeZone;
+
+
+          if (strDate == null)
+          {
+            return null;
+          }
+
+          Date fromDate = null;
+          Date toDate = null;
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+    fromDate = sdf.parse(strDate);
+
+
+    SimpleDateFormat toSDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    toSDF.setTimeZone(TimeZone.getTimeZone("America/New_York"));
+
+    toDate = toSDF.format(fromDate);
+
+    return toDate;
+
+  }
+
+def getSectionFromSISId(strSISId)
+				{
+					String[] strSplit = null;
+					if (strSISId.contains("-"))
+					{
+						strSplit = strSISId.split("-");
+						if(strSplit.length >=2)
+						{
+							if (Character.isDigit(strSplit[strSplit.length-2].charAt(0)))
+							{
+								return strSplit[strSplit.length-2];
+							}
+							else
+							{
+								return 0;
+							}
+						}
+						else
+							return strSplit[0];
+					}
+					else
+					{
+						return 0;
+					}
+				}
+        
+def isTermEnded(endDate, timeZone)
+           {
+	           	import java.util.Date;
+				import java.text.SimpleDateFormat;
+				import java.util.TimeZone;
+				import java.util.Calendar;
+				
+         		if (endDate == null)
+         		{
+         			return false;
+         		}
+         		
+	         	Date termStartDate = null;
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+				sdf.setTimeZone(TimeZone.getTimeZone(timeZone));
+				termEndDate = sdf.parse(endDate);
+				
+				Calendar cal = Calendar.getInstance();
+				cal.setTime(termEndDate);
+				cal.add(Calendar.DATE, 1);
+				termEndDate = cal.getTime();
+				
+				Date todayDate = sdf.parse(sdf.format(new Date()));
+				
+				Integer isBefore = todayDate.compareTo(termEndDate);
+				
+				//System.out.println("endDate : " + endDate );
+				//System.out.println("termEndDate : " + termEndDate );
+				//System.out.println("todayDate : " + todayDate );
+				//System.out.println("End Date : " + isBefore );
+				if (0 > isBefore)
+					return false;
+				else
+					return true;
+				
+           }
+          
+        def getMondayLastWeek()
+          {
+          
+				import java.util.Calendar;
+				import org.joda.time.DateTime;
+				import org.joda.time.DateTimeConstants;
+			
+				DateTime now = new DateTime();
+				DateTime monday = now.withDayOfWeek(DateTimeConstants.MONDAY);
+				//System.out.println("Monday def ====  " + monday.toString("YYYY-MM-dd"));
+				
+				return	monday.toString("YYYY-MM-dd");		
+			}
+			
+		def isATestTerm(strTerm)
+          {
+				if (strTerm.toLowerCase().contains("test") || strTerm.toLowerCase().contains("default term") || strTerm.toLowerCase().contains("master term") || strTerm.toLowerCase().contains("training") || strTerm.toLowerCase().contains("cdt"))
+				{
+					return true;
+				}
+				return	false;		
+			}
+			
+          def getSundayLastWeek()
+          {
+          
+				import java.util.Calendar;
+				import org.joda.time.DateTime;
+				import org.joda.time.DateTimeConstants;
+			
+				DateTime now = new DateTime();
+				DateTime sunday = now.withDayOfWeek(DateTimeConstants.SUNDAY);
+				//System.out.println("sunday def === " + sunday.toString("YYYY-MM-dd"));
+				
+				return	sunday.toString("YYYY-MM-dd");	
+			}
+			
+            def getWordCount(textForWordCount){
+            	
+            	import org.jsoup.Jsoup;
+				import org.jsoup.nodes.Document;
+		
+				Document htmlText = Jsoup.parse(textForWordCount);
+				String str = htmlText.text().replace("\\n", "");
+				String[] strSplit = str.split(" ");
+				
+				//System.out.println("str length : " + strSplit.length +  " string values  : " + str );
+				
+				return strSplit.length;
+            
+            }
+            
+            def isInLastWeek(postedDate)
+            {
+            	import java.util.Date;
+				import java.text.SimpleDateFormat;
+				import java.util.TimeZone;
+				import org.joda.time.DateTime;
+				
+          		
+          		if (postedDate == null)
+          		{
+          			return false;
+          		}
+          		
+          		Date termStartDate = null;
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+				termStartDate = sdf.parse(postedDate);
+				
+				//System.out.println("postedDate : " + postedDate );
+				
+				Date monday = sdf.parse(getMondayLastWeek());
+				//System.out.println("Monday  week ----- : " + monday );
+				Date sunday = sdf.parse(getSundayLastWeek());
+				//System.out.println("Sunday  week ----- : " + sunday);
+				
+				Integer isBefore = termStartDate.compareTo(monday);
+				
+				//System.out.println("Before : " + isBefore );
+				if (0 > isBefore)
+				{
+					return false;
+				}
+				
+				Integer after = termStartDate.compareTo(sunday);
+				//System.out.println("after : " + after );
+				if (after > 0)
+					return false;
+          		
+          		return true;
+            }
+            
+	         def startDate(strDate,timeZone)
+	          {
+	          		import java.util.Date;
+					import java.text.SimpleDateFormat;
+					import java.util.TimeZone;
+					
+	          		
+	          		if (strDate == null)
+	          		{
+	          			return 0;
+	          		}
+	          		
+	          		
+	          		//System.out.println( "strDate  : " + strDate.toString() );
+	          		
+		          	Date termStartDate = null;
+					//SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+					sdf.setTimeZone(TimeZone.getTimeZone(timeZone));
+					
+					
+					termStartDate = sdf.parse(strDate);
+					//System.out.println( "strDate  :  1 : - " + termStartDate.toString() );
+	
+					SimpleDateFormat sdf1 =
+					        new SimpleDateFormat("EEE, MMM d, yyyy hh:mm:ss a z");
+					
+					Date todayDate = sdf.parse(sdf.format(new Date()));
+					
+					//System.out.println( "strDate  :  3 : - " + todayDate.toString() );
+					
+					long diffTime = todayDate.getTime() - termStartDate.getTime(); 	
+					//System.out.println( "strDate  :  4 : "  + diffTime.toString());
+					
+					long diffDays = diffTime / (24 * 60 * 60 * 1000);
+					
+					//System.out.println(  "diffDays parsed : " + diffDays.toString());
+					
+					return  diffDays;
+				}
+        
