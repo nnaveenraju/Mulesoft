@@ -1,0 +1,130 @@
+package com.bisk.autowithdrawals;
+
+import java.util.Set;
+
+import org.mule.DefaultMuleEvent;
+import org.mule.DefaultMuleMessage;
+import org.mule.MessageExchangePattern;
+import org.mule.api.MuleContext;
+import org.mule.api.MuleEvent;
+import org.mule.api.MuleEventContext;
+import org.mule.api.MuleMessage;
+import org.mule.api.construct.FlowConstruct;
+import org.mule.api.construct.FlowConstructAware;
+import org.mule.api.context.MuleContextAware;
+import org.mule.api.lifecycle.Callable;
+import org.mule.api.processor.MessageProcessor;
+import org.mule.session.DefaultMuleSession;
+
+public class GetNextURICanvas implements Callable, FlowConstructAware, MuleContextAware {
+
+	MuleContext mContext;
+	FlowConstruct flowConstruct;
+
+	@Override
+	public void setMuleContext(MuleContext context) {
+		this.mContext = context;
+	}
+
+
+	@Override
+	public void setFlowConstruct(FlowConstruct flowConstruct) {
+		this.flowConstruct = flowConstruct;		
+	}
+
+	
+	@Override
+	public Object onCall(MuleEventContext eventContext) throws Exception {
+		
+		String strPayload = eventContext.getMessage().getPayload().toString();
+		
+		String subDomain = eventContext.getMessage().getInvocationProperty("subDomain");
+		String subDomainBasepath = eventContext.getMessage().getInvocationProperty("subDomainBasepath"); 
+		
+//		if (strPayload.trim().isEmpty() || getNextURL( strPayload, subDomain, subDomainBasepath ) != "")
+//			return "";
+		MessageProcessor flow = mContext.getRegistry().lookupObject("common-code-process-next-paged-data-using-url-transform-data");
+		MuleMessage muleMessage = new DefaultMuleMessage(eventContext.getMessage(), mContext);
+		MuleEvent inputEvent = new DefaultMuleEvent(muleMessage, MessageExchangePattern.REQUEST_RESPONSE,
+				mContext.getRegistry().lookupFlowConstruct("common-code-process-next-paged-data-using-url-transform-data") ,new DefaultMuleSession() );
+		
+		Set<String> flowVars = eventContext.getMessage().getInvocationPropertyNames();
+		for (String flowVar : flowVars)
+		{
+			inputEvent.setFlowVariable(flowVar, eventContext.getMessage().getInvocationProperty(flowVar));
+		}
+		
+		try {
+			do {
+				muleMessage.setPayload(getNextURL(strPayload, subDomain, subDomainBasepath));
+				System.out.println("In Java Class : Getting data for URL : "  + muleMessage.getPayloadAsString());
+
+				MuleEvent result = flow.process(inputEvent);
+				strPayload = "";
+				
+				flowVars = eventContext.getMessage().getInvocationPropertyNames();
+				for (String flowVar : flowVars)
+				{
+					inputEvent.setFlowVariable(flowVar, result.getMessage().getInvocationProperty(flowVar));
+				}
+				
+				
+				for (String link : result.getMessage().getInboundPropertyNames())
+				{
+					if (link.toLowerCase().equals("link") || link.toLowerCase().equals("links"))
+					{
+						if (result.getMessage().getInboundProperty(link) != null)
+						{
+							if (getNextURL( result.getMessage().getInboundProperty(link).toString(), subDomain, subDomainBasepath ) != "") 
+							{
+								System.out.println(result.getMessage().getInboundProperty(link).toString());
+								strPayload = result.getMessage().getInboundProperty(link).toString();
+							}
+						}
+					}
+				}
+				
+				
+			} while (getNextURL( strPayload, subDomain, subDomainBasepath ) != "");
+					
+
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		
+		//System.out.println("concurrent issues : 5-out");
+		//return nextURI.replace(subDomain, "").replace(subDomainBasepath, "").replace("https://", "") ;
+		return "";
+	}
+
+	private String getNextURL(String strLinks, String subDomain, String subDomainBasepath )
+	{
+		String nextURL = "";
+		String[] links = strLinks.split(",");
+		//System.out.println("concurrent issues : 1");
+		
+		try {
+			for (String link : links)
+			{
+//				System.out.println("concurrent issues : 2");
+				if (link.contains("rel=\"next\""))
+				{
+//					System.out.println("concurrent issues : 3");
+					nextURL = link.split(";")[0].toString().replaceAll("[<>]", "" );
+					nextURL = nextURL.replace(subDomain, "").replace(subDomainBasepath, "").replace("https://", "") ;
+				}
+			}
+		}
+		catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		return nextURL;
+		
+	}
+
+
+
+}
+
+
+   
