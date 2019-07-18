@@ -1,0 +1,15 @@
+
+
+<smtp:outbound-endpoint 
+      host="smtp.gmail.com" 
+      port="587" 
+      user="vinay.mulesoft@gmail.com" 
+      password="**********" 
+      connector-ref="Gmail" 
+      to="#[groovy:flowVars.notificationEmailId]" 
+      from="vinay.mulesoft@gmail.com" 
+      responseTimeout="10000" 
+      doc:name="SMTP : Gmail : Test" 
+      mimeType="text/html"/>
+        
+        
